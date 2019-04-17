@@ -1,9 +1,9 @@
 # Gender Bias in Facial Expression Recognition
 
-![Friendly Robot](https://raw.githubusercontent.com/PixelWeaver/Gender-Bias-in-Facial-Expression-Recognition/master/Berkeley_recognition.png)[^1]
+![Friendly Robot](https://raw.githubusercontent.com/PixelWeaver/Gender-Bias-in-Facial-Expression-Recognition/master/Berkeley_recognition.png)
 
 ## Goal
-Our goal is to highlight once more the gender bias appearing naturally in Neural Networks, this time in the context of facial expression recognition. After demonstrating its impact and discussing its origin, we will attempt to develop methodologies to counter its influence on the output of deep convolutional neural networks. 
+Our goal is to highlight once more the gender bias appearing naturally in Neural Networks, this time in the context of facial expression recognition. After demonstrating its impact and discussing its origin, we will attempt to develop methodologies to counter its influence on the output of deep convolutional neural networks.[^1]
 
 ## Dataset
 We will be relying on the the [Comprehensive Database for Facial Expression Analysis (CK) and on the Extended Cohn-Kanade Dataset (CK+)](http://consortium.ri.cmu.edu/ckagree/) to train our architecture. The testing of our model will be done on a dataset we will collect personnally.
