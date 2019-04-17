@@ -3,7 +3,7 @@
 ## Goal
 
 ## Dataset
-We will be relying on the the [Comprehensive Database for Facial Expression Analysis (CK) and on the Extended Cohn-Kanade Dataset (CK+)](http://consortium.ri.cmu.edu/ckagree/).
+We will be relying on the the [Comprehensive Database for Facial Expression Analysis (CK) and on the Extended Cohn-Kanade Dataset (CK+)](http://consortium.ri.cmu.edu/ckagree/) to train our architecture. The testing of our model will be done on a dataset we will collect personnally.
 
 ## Interesting references
 1. [Review of Deep Learning Techniques for Gender Classification in Images](https://link.springer.com/chapter/10.1007/978-981-13-0761-4_102)
