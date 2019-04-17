@@ -18,4 +18,4 @@ We will be relying on the the [Comprehensive Database for Facial Expression Anal
 1. [Wondering is enough: Uncertainty about category information undermines face recognition](www.sciencedirect.com/science/article/pii/S0022103118304621)
 1. [Robust Face Analysis Employing Machine Learning Techniques for Remote Heart Rate Estimation and towards Unbiased Attribute Analysis](www.datascience-riviera.fr/slides/190130%20-%20ADas_HR.pdf)
 
-[1]: Credits to UC Berkeley
+[1] Credits to UC Berkeley
