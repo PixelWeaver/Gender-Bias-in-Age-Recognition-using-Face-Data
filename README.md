@@ -17,6 +17,6 @@ We will be relying on the the [Comprehensive Database for Facial Expression Anal
 1. [Robust Face Analysis Employing Machine Learning Techniques for Remote Heart Rate Estimation and towards Unbiased Attribute Analysis](www.datascience-riviera.fr/slides/190130%20-%20ADas_HR.pdf)
 1. [Recognizing human facial expressions with machine learning](https://www.thoughtworks.com/insights/blog/recognizing-human-facial-expressions-machine-learning)
 
-![Friendly Robot](https://raw.githubusercontent.com/PixelWeaver/Gender-Bias-in-Facial-Expression-Recognition/master/Berkeley_recognition.png)[1]
+![Friendly Robot](https://raw.githubusercontent.com/PixelWeaver/Gender-Bias-in-Facial-Expression-Recognition/master/Berkeley_recognition.png)
 
-[1] Credits to UC Berkeley
+Image credits : UC Berkeley
