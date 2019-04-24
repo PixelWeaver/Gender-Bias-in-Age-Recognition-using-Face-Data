@@ -1,20 +1,14 @@
-import datetime
-import tensorflow as tf
 import cv2
 import os
 import numpy as np
 import math
 
-# Imports for the HParams plugin
-from tensorboard.plugins.hparams import api_pb2
-from tensorboard.plugins.hparams import summary as hparams_summary
-from google.protobuf import struct_pb2
-
 target_size = 500
+
 
 # Print iterations progress
 # FROM https://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console
-def printProgressBar(iteration, total, prefix='Progress :', suffix='Complete', decimals=1, length=50, fill='█'):
+def print_progress_bar(iteration, total, prefix='Progress :', suffix='Complete', decimals=1, length=50, fill='█'):
     """
     Call in a loop to create terminal progress bar
     @params:
@@ -27,14 +21,15 @@ def printProgressBar(iteration, total, prefix='Progress :', suffix='Complete', d
         fill        - Optional  : bar fill character (Str)
     """
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
-    filledLength = int(length * iteration // total)
-    bar = fill * filledLength + '-' * (length - filledLength)
-    print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end = '\r')
+    filled_length = int(length * iteration // total)
+    bar = fill * filled_length + '-' * (length - filled_length)
+    print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end='\r')
     # Print New Line on Complete
     if iteration == total:
         print()
 
-def resizeImage(img_path):
+
+def resize_image(img_path):
     img = cv2.imread("db/faces/" + img_path)
     old_dimensions = img.shape[:2]
 
@@ -64,7 +59,8 @@ def resizeImage(img_path):
 
     return save_path
 
-def preprocessData():
+
+def preprocess_data():
     # Retrieve every image entry in the database
     data_indexes = ["fold_0_data.txt", "fold_1_data.txt", "fold_2_data.txt", "fold_3_data.txt", "fold_4_data.txt"]
     entries = []
@@ -77,16 +73,16 @@ def preprocessData():
 
     # Resize them to fixed size + filling data_index
     for i in range(0, len(entries)):
-        printProgressBar(i + 1, len(entries), 'Resizing images : ')
+        print_progress_bar(i + 1, len(entries), 'Resizing images : ')
         entry = entries[i]
         entry = entry.split("\t")
-        save_path = resizeImage(entry[0] + "/" + "coarse_tilt_aligned_face." + entry[2] + "." + entry[1])
+        save_path = resize_image(entry[0] + "/" + "coarse_tilt_aligned_face." + entry[2] + "." + entry[1])
         data_index.append([save_path, entry[3], entry[4]])
 
     # Work out mean image
     mean_img = np.zeros((target_size, target_size, 3), np.uint32)
     for i in range(0, len(data_index)):
-        printProgressBar(i + 1, len(data_index), 'Working out mean : ')
+        print_progress_bar(i + 1, len(data_index), 'Working out mean : ')
         img = cv2.imread(data_index[i][0])
         mean_img += img
     mean_img = np.true_divide(mean_img, len(data_index))
@@ -95,33 +91,33 @@ def preprocessData():
     # Work out standard deviation image
     standard_deviation_img = np.zeros((target_size, target_size, 3), np.uint32)
     for i in range(0, len(data_index)):
-        printProgressBar(i + 1, len(data_index), 'Working out standard deviation : ')
+        print_progress_bar(i + 1, len(data_index), 'Working out standard deviation : ')
         img = cv2.imread(data_index[i][0])
         standard_deviation_img += np.power(img - mean_img, 2).astype(np.uint32)
     standard_deviation_img = np.sqrt(np.true_divide(standard_deviation_img, len(data_index) - 1))
     cv2.imwrite("db/preprocessed/standard_deviation.jpg", standard_deviation_img)
 
     # Normalizing images
-    min = math.inf
-    max = -math.inf
+    absolute_min = math.inf
+    absolute_max = -math.inf
     normalized_images = []
     for i in range(0, len(data_index)):
-        printProgressBar(i + 1, len(data_index), 'Normalizing images : ')
+        print_progress_bar(i + 1, len(data_index), 'Normalizing images : ')
         img = ((cv2.imread(data_index[i][0]).astype(np.int64) - mean_img) / standard_deviation_img)
-        amin = np.amin(img)
-        if amin < min:
-            min = amin
+        img_min = np.amin(img)
+        if img_min < absolute_min:
+            absolute_min = img_min
         amax = np.amax(img)
-        if amax > max:
-            max = amax
+        if amax > absolute_max:
+            absolute_max = amax
         normalized_images.append(img)
 
     for i in range(0, len(data_index)):
-        normalized_images[i] -= min  # Start @ 0
-        normalized_images[i] *= 255 / (max - min)  # Occupy full scale
+        normalized_images[i] -= absolute_min  # Start @ 0
+        normalized_images[i] *= 255 / (absolute_max - absolute_min)  # Occupy full scale
         cv2.imwrite(data_index[i][0], normalized_images[i])
 
     print("All done !")
 
 
-preprocessData()
+preprocess_data()
