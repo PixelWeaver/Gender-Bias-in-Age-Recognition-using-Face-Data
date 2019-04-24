@@ -1,10 +1,10 @@
-# Gender Bias in Facial Expression Recognition
+# Gender Bias in Age Recognition using Face Data
 
 ## Goal
-Our goal is to highlight once more the gender bias appearing naturally in Neural Networks, this time in the context of facial expression recognition. After demonstrating its impact and discussing its origin, we will attempt to develop methodologies to counter its influence on the output of deep convolutional neural networks.
+Our goal is to highlight once more the gender bias appearing naturally in Neural Networks, this time in the context of age recognition using face data. After demonstrating its impact and discussing its origin, we will attempt to develop methodologies to counter its influence on the output of deep convolutional neural networks.
 
 ## Dataset
-We will be relying on the the [Comprehensive Database for Facial Expression Analysis (CK) and on the Extended Cohn-Kanade Dataset (CK+)](http://consortium.ri.cmu.edu/ckagree/) to train our architecture. The testing of our model will be done on a dataset we will collect personnally.
+We will be relying on the the [OUI-Adience Face Image Project](https://talhassner.github.io/home/projects/Adience/Adience-data.html?fbclid=IwAR3oevRX2opUvkx6Iome4SCFYEvYsFoXbUva_uQGgZVafQ__TyEU2LkjyN8) to train, validate and test our architecture. 
 
 ## Interesting references
 1. [Review of Deep Learning Techniques for Gender Classification in Images](https://link.springer.com/chapter/10.1007/978-981-13-0761-4_102)
