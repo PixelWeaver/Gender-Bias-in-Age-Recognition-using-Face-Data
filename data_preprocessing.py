@@ -100,22 +100,24 @@ def preprocess_data():
     # Normalizing images
     absolute_min = math.inf
     absolute_max = -math.inf
-    normalized_images = []
     for i in range(0, len(data_index)):
-        print_progress_bar(i + 1, len(data_index), 'Normalizing images : ')
-        img = ((cv2.imread(data_index[i][0]).astype(np.int64) - mean_img) / standard_deviation_img)
+        print_progress_bar(i + 1, len(data_index), 'Retrieving image scale : ')
+        img = ((cv2.imread(data_index[i][0]).astype(np.int16) - mean_img) / standard_deviation_img)
         img_min = np.amin(img)
         if img_min < absolute_min:
             absolute_min = img_min
-        amax = np.amax(img)
-        if amax > absolute_max:
-            absolute_max = amax
-        normalized_images.append(img)
+        img_max = np.amax(img)
+        if img_max > absolute_max:
+            absolute_max = img_max
+        np.save(data_index[i][0] + ".npy", img.astype(np.int16))
 
     for i in range(0, len(data_index)):
-        normalized_images[i] -= absolute_min  # Start @ 0
-        normalized_images[i] *= 255 / (absolute_max - absolute_min)  # Occupy full scale
-        cv2.imwrite(data_index[i][0], normalized_images[i])
+        print_progress_bar(i + 1, len(data_index), 'Normalizing images : ')
+        img = np.load(data_index[i][0] + ".npy").astype(np.float64)
+        img -= absolute_min  # Start @ 0
+        img *= 255 / (absolute_max - absolute_min)  # Occupy full scale
+        cv2.imwrite(data_index[i][0], img)
+        os.remove(data_index[i][0] + ".npy")
 
     print("All done !")
 
