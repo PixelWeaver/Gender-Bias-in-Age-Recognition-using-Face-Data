@@ -93,7 +93,7 @@ def preprocess_data():
                 age_index.append(((bottom + top) / 2, (top - bottom) / 2))
             else:
                 age_index.append((int(entry[3]), 0))
-        except ValueError:
+        except ValueError:  # ignore [incorrectly formatted / incomplete] lines
             image_index.pop()
 
     # Flushing indexes to disk
