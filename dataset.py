@@ -152,4 +152,8 @@ def preprocess_data():
     print("All done !")
 
 
-preprocess_data()
+if os.path.isdir("db/preprocessed"):
+    print("Nothing to be done.")
+else:
+    print("Started preprocessing data...")
+    preprocess_data()
