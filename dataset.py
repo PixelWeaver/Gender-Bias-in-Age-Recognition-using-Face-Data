@@ -4,6 +4,7 @@ import numpy as np
 import math
 import re
 import util
+import tensorflow as tf
 
 
 class Dataset:
@@ -14,11 +15,12 @@ class Dataset:
         self.image_index = []
         self.age_index = []
         self.gender_index = []
-        self.target_image_size = 500
+        self.target_image_size = 200
 
         if not os.path.isfile(self.db_path + self.preprocessed_path + "lock") or force_preprocessing:
             print("Started preprocessing data...")
             self.preprocess_data()
+            self.save_dataset()
 
         self.load_indexes()
 
@@ -40,24 +42,6 @@ class Dataset:
             formatted_gender_index = f_handle.readlines()
             for formatted_gender_input in formatted_gender_index:
                 self.gender_index.append(int(formatted_gender_input[:-1]))
-
-        train_count = 500
-        test_count = 50
-
-        x_train = []
-        y_train = []
-        x_test = []
-        y_test = []
-
-        for i in range(0, train_count):
-            x_train.append(cv2.imread(self.image_index[i]))
-            y_train.append(self.age_index[i])
-
-        for i in range(train_count, test_count):
-            x_test.append(cv2.imread(self.image_index[i]))
-            y_test.append(self.age_index[i])
-
-        return (x_train, y_train), (x_test, y_test)
 
     def resize_image(self, img_path_in_db):
         img = cv2.imread(self.db_path + self.unprocessed_path + img_path_in_db)
@@ -181,3 +165,41 @@ class Dataset:
         f_handle.close()
         print("All done.")
 
+    @staticmethod
+    def preprocess_image(image):
+        image = tf.image.decode_jpeg(image, channels=3)
+        image = tf.image.resize_images(image, [192, 192])
+        image /= 255.0  # normalize to [0,1] range
+
+        return image
+
+    def save_dataset(self):
+        image_ds = tf.data.Dataset.from_tensor_slices(self.image_index).map(tf.read_file)
+        tfrec = tf.data.experimental.TFRecordWriter(self.db_path + 'images.tfrec')
+        tfrec.write(image_ds)
+
+    def get_dataset(self):
+        BATCH_SIZE = 32
+        AUTOTUNE = tf.data.experimental.AUTOTUNE
+        DATASET_SIZE = len(self.image_index)
+        train_size = int(0.7 * DATASET_SIZE)
+        test_size = int(0.15 * DATASET_SIZE)
+
+        ds = tf.data.TFRecordDataset(self.db_path + 'images.tfrec').map(self.preprocess_image)
+        out_ds = tf.data.Dataset.from_tensor_slices(self.age_index)
+        ds = tf.data.Dataset.zip((ds, out_ds))
+
+        # Setting a shuffle buffer size as large as the dataset ensures that the data is
+        # completely shuffled.
+        ds = ds.shuffle(buffer_size=DATASET_SIZE)
+        ds = ds.repeat()
+        ds = ds.batch(BATCH_SIZE)
+        # `prefetch` lets the dataset fetch batches, in the background while the model is training.
+        ds = ds.prefetch(buffer_size=AUTOTUNE)
+
+        train_dataset = ds.take(train_size)
+        test_dataset = ds.skip(train_size)
+        test_dataset = test_dataset.take(test_size)
+        val_dataset = test_dataset.skip(test_size)
+
+        return train_dataset, test_dataset, val_dataset

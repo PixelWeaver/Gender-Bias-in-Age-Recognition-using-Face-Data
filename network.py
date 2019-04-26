@@ -1,6 +1,4 @@
-import cv2
-import tensorflow as tf
-import numpy as np
+ import tensorflow as tf
 from dataset import Dataset
 
 # Just disables the warning, doesn't enable AVX/FMA cf
@@ -13,57 +11,106 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 class NeuralNetwork:
     def __init__(self, gpu_check=True):
-        self.nothing = None
         self.dataset = Dataset()
 
         if gpu_check:  # Check that GPU is correctly detected
             tf.Session(config=tf.ConfigProto(log_device_placement=True))
 
-        # Hyperparameters
-        self.n_inputs = 28 * 284
-        self.n_hidden_1 = 3005
-        self.n_hidden_2 = 1006
-        self.n_outputs = 1078
-        self.X = tf.placeholder(tf.float32, shape(None, self.n_inputs),
-                                name="X")  # input layer
-        self.y = tf.placeholder(tf.int64, shape(None),
-                                name="y")  # output layer
+    def cnn_model_fn(self, mode):
+        # Input Layer
+        input_layer = tf.reshape(features["x"], [-1, 28, 28, 1])
 
-        # Define network model
-        with tf.name_scope("my_net"):
-            hidden_1 = tf.layers.dense(self.X, self.n_hidden_1, name="hidden_1", activation=tf.nn.relu)
-            hidden_2 = tf.layers.dense(hidden_1, self.n_hidden_2, name="hidden_2", activation=tf.nn.relu)
-            logits = tf.layers.dense(hidden_2, self.n_outputs, name="outputs")  # output before final activation function
+        # Convolutional Layer #1 + Pooling Layer
+        conv_1 = tf.layers.conv2d(
+            inputs=input_layer,
+            filters=96,
+            kernel_size=[7, 7],
+            name="conv_1",
+            padding="same",
+            activation=tf.nn.relu)
 
-        # Define loss function
-        with tf.name_scope("loss"):
-            entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=logits)
+        pool_1 = tf.layers.max_pooling2d(
+            inputs=conv_1,
+            pool_size=[5, 5],
+            strides=5)
 
-        # Define optimizer
-        with tf.name_scope("train"):
-            optimizer = tf.train.GradientDescentOptimizer(0.0001)
-            training_op = optimizer.minimize(loss)
+        # Convolutional Layer #2 + Pooling Layer
+        conv_2 = tf.layers.conv2d(
+            inputs=pool_1,
+            filters=256,
+            kernel_size=[5, 5],
+            name="conv_2",
+            padding="same",
+            activation=tf.nn.relu)
+        pool_2 = tf.layers.max_pooling2d(
+            inputs=conv_2,
+            pool_size=[3, 3],
+            strides=3)
 
-        # Define evaluation metric
-        with tf.name_scope("eval"):
-            correct = tf.nn.in_top_k(logits, y, 1)  # Doest the highest logit match with the class?
-            accuracy = tf.reduce_mean(tf.cast(correct, tf.float32))
+        # Convolutional Layer #3 + Pooling Layer
+        conv_3 = tf.layers.conv2d(
+            inputs=pool_2,
+            filters=384,
+            kernel_size=[3, 3],
+            name="conv_3",
+            padding="same",
+            activation=tf.nn.relu)
+        pool_3 = tf.layers.max_pooling2d(
+            inputs=conv_3,
+            pool_size=[2, 2],
+            strides=2)
 
-    def train(self, batch_size, n_epochs):
-        # Train the network
-        with tf.Session as sess:
-            init.run()
-            for epoch in range(n_epochs):
-                for iteration in range(mnist.train.num_examples / batch_size):
-                    X_batch, y_batch = mnist.train.next_batch(batch_size)
-                    sess.run(training_op, feed_dict={self.X: X_batch, self.y: y_batch})
+        # Dense Layer #1
+        pool2_flat = tf.reshape(pool_3, [-1, 7 * 7 * 64])
+        dense_1 = tf.layers.dense(
+            inputs=pool2_flat,
+            units=512,
+            activation=tf.nn.relu)
+        dropout_1 = tf.layers.dropout(
+            inputs=dense_1,
+            rate=0.4,
+            training=mode == tf.estimator.ModeKeys.TRAIN)
 
-                    training_acc = accuracy.eval(feed_dict={self.X: X_batch, self.y: y_batch})
-                    val_acc = accuracy.eval(feed_dict={self.X: mnist.validation_images, self.y: mnist_validation_labels})
+        # Dense Layer #2
+        dense_2 = tf.layers.dense(
+            inputs=dropout_1,
+            units=512,
+            activation=tf.nn.relu)
+        dropout_2 = tf.layers.dropout(
+            inputs=dense_2,
+            rate=0.4,
+            training=mode == tf.estimator.ModeKeys.TRAIN)
 
-    def test(self):
-        # Test the network
-        with tf.Session as sess:
-            saver.restore(sess, "./my_path/model.ckpt")
-            Z = logits.eval(feed_dict={self.X: mnist.testing_images})
-            y_pred = np.argmax(Z, axis=1)
+
+        # Logits Layer
+        logits = tf.layers.dense(inputs=dropout, units=10)
+
+        predictions = {
+            # Generate predictions (for PREDICT and EVAL mode)
+            "classes": tf.argmax(input=logits, axis=1),
+            # Add `softmax_tensor` to the graph. It is used for PREDICT and by the
+            # `logging_hook`.
+            "probabilities": tf.nn.softmax(logits, name="softmax_tensor")
+        }
+
+        if mode == tf.estimator.ModeKeys.PREDICT:
+            return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
+
+        # Calculate Loss (for both TRAIN and EVAL modes)
+        loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
+
+        # Configure the Training Op (for TRAIN mode)
+        if mode == tf.estimator.ModeKeys.TRAIN:
+            optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.001)
+            train_op = optimizer.minimize(
+                loss=loss,
+                global_step=tf.train.get_global_step())
+            return tf.estimator.EstimatorSpec(mode=mode, loss=loss, train_op=train_op)
+
+        # Add evaluation metrics (for EVAL mode)
+        eval_metric_ops = {
+            "accuracy": tf.metrics.accuracy(
+                labels=labels, predictions=predictions["classes"])
+        }
+        return tf.estimator.EstimatorSpec(
+            mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
