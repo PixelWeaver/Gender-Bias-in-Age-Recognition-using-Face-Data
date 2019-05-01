@@ -5,6 +5,7 @@ import math
 import re
 import util
 import tensorflow as tf
+tf.enable_eager_execution()
 
 
 class Dataset:
@@ -13,16 +14,25 @@ class Dataset:
         self.unprocessed_path = "faces/"
         self.preprocessed_path = "preprocessed/"
         self.image_index = []
-        self.age_index = []
+        self.age_index = list()
         self.gender_index = []
-        self.target_image_size = 200
+        self.target_image_size = 256
 
         if not os.path.isfile(self.db_path + self.preprocessed_path + "lock") or force_preprocessing:
             print("Started preprocessing data...")
             self.preprocess_data()
             self.save_dataset()
+            return
 
         self.load_indexes()
+        self.save_dataset()
+
+    @staticmethod
+    def get_label_from_median(median):
+        boundaries = [3, 7, 14, 24, 37, 47, 59, 150]
+        for i in range(len(boundaries)):
+            if median <= boundaries[i]:
+                return i
 
     def load_indexes(self):
         with open('db/preprocessed/image.index', 'r') as f_handle:
@@ -33,10 +43,7 @@ class Dataset:
         with open('db/preprocessed/age.index', 'r') as f_handle:
             formatted_age_index = f_handle.readlines()
             for formatted_age_input in formatted_age_index:
-                values = formatted_age_input[:-1]
-                values = values.split(" ")
-
-                self.age_index.append((float(values[0]), float(values[1])))
+                self.age_index.append(int(formatted_age_input[:-1]))
 
         with open('db/preprocessed/gender.index', 'r') as f_handle:
             formatted_gender_index = f_handle.readlines()
@@ -98,13 +105,17 @@ class Dataset:
                     gender_index.append(1 if entry[4] == "f" else 0)
                 else:
                     raise ValueError
+                if entry[3][0] == 'N':
+                    raise ValueError
                 if entry[3][0] == '(':
                     interval = re.sub("\(|\)|\s", "", entry[3]).split(",")
                     bottom = int(interval[0])
                     top = int(interval[1])
-                    age_index.append(((bottom + top) / 2, (top - bottom) / 2))
+                    median = bottom + top  # std_dev = 2 (top - bottom) / 2
+                    age_index.append(self.get_label_from_median(median))
+
                 else:
-                    age_index.append((int(entry[3]), 0))
+                    age_index.append(self.get_label_from_median(int(entry[3])))
             except ValueError:  # ignore [incorrectly formatted / incomplete] lines
                 image_index.pop()
 
@@ -115,7 +126,7 @@ class Dataset:
 
         with open('db/preprocessed/age.index', 'w+') as f_handle:
             for item in age_index:
-                f_handle.write('%s %s\n' % item)
+                f_handle.write('%s\n' % item)
 
         with open('db/preprocessed/gender.index', 'w+') as f_handle:
             for item in gender_index:
@@ -168,13 +179,14 @@ class Dataset:
     @staticmethod
     def preprocess_image(image):
         image = tf.image.decode_jpeg(image, channels=3)
-        image = tf.image.resize_images(image, [192, 192])
+        image = tf.image.resize_images(image, [256, 256])
         image /= 255.0  # normalize to [0,1] range
 
         return image
 
     def save_dataset(self):
-        image_ds = tf.data.Dataset.from_tensor_slices(self.image_index).map(tf.read_file)
+        image_ds = tf.data.Dataset.from_tensor_slices(self.image_index)
+        image_ds = image_ds.map(tf.read_file)
         tfrec = tf.data.experimental.TFRecordWriter(self.db_path + 'images.tfrec')
         tfrec.write(image_ds)
 
@@ -185,7 +197,8 @@ class Dataset:
         train_size = int(0.7 * DATASET_SIZE)
         test_size = int(0.15 * DATASET_SIZE)
 
-        ds = tf.data.TFRecordDataset(self.db_path + 'images.tfrec').map(self.preprocess_image)
+        ds = tf.data.TFRecordDataset(self.db_path + 'images.tfrec')
+        ds = ds.map(self.preprocess_image)
         out_ds = tf.data.Dataset.from_tensor_slices(self.age_index)
         ds = tf.data.Dataset.zip((ds, out_ds))
 
@@ -203,3 +216,8 @@ class Dataset:
         val_dataset = test_dataset.skip(test_size)
 
         return train_dataset, test_dataset, val_dataset
+
+
+jc = Dataset()
+jaques = jc.get_dataset()
+
