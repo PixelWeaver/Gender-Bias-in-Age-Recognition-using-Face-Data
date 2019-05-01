@@ -1,6 +1,7 @@
 import tensorflow as tf
 from estimator import model_fn, serving_fn
 from dataset import Dataset
+from input import input_fn
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -11,9 +12,9 @@ if __name__ == '__main__':
     model_dir = "model"
     config = tf.estimator.RunConfig(model_dir=model_dir, save_checkpoints_steps=1500)
 
-    train_spec = tf.estimator.TrainSpec(input_fn=lambda: input_func(train_dataset),
+    train_spec = tf.estimator.TrainSpec(input_fn=lambda: input_fn(train_dataset),
                                         max_steps=1000)
-    eval_spec = tf.estimator.EvalSpec(input_fn=lambda: input_func(val_dataset))
+    eval_spec = tf.estimator.EvalSpec(input_fn=lambda: input_fn(val_dataset))
 
     estimator = tf.estimator.Estimator(
         model_fn=model_fn, config=config, params={
@@ -24,24 +25,3 @@ if __name__ == '__main__':
 
     estimator.export_savedmodel(export_dir_base='{}/serving'.format(model_dir),
                                 serving_input_receiver_fn=serving_fn, as_text=True)
-
-
-def parser(record):
-    features = {
-        'feats': tf.FixedLenFeature([], tf.string),
-        'label': tf.FixedLenFeature([], tf.int64),
-    }
-
-    parsed = tf.parse_single_example(record, features)
-    feats = tf.convert_to_tensor(tf.decode_raw(parsed['feats'], tf.float64))
-    label = tf.cast(parsed['label'], tf.int32)
-
-    return {'feats': feats}, label
-
-
-def input_func(ds):
-    iterator = ds.make_one_shot_iterator()
-
-    batch_feats, batch_labels = iterator.get_next()
-
-    return batch_feats, batch_labels

@@ -8,7 +8,7 @@ import tensorflow as tf
 
 import util
 
-tf.enable_eager_execution()
+# tf.enable_eager_execution()
 
 
 class Dataset:
