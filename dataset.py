@@ -28,6 +28,9 @@ class Dataset:
             self.preprocess_data()
             self.load_indexes()
             self.save_dataset()
+        else:
+            self.load_indexes()
+            self.save_dataset()
 
     def load_indexes(self):
         with open('db/preprocessed/image.index', 'r') as f_handle:
