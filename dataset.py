@@ -20,6 +20,9 @@ class Dataset:
         self.age_index = []
         self.gender_index = []
         self.target_image_size = 250
+        self.train_record_path = self.db_path + 'train.tfrec'
+        self.test_record_path = self.db_path + 'test.tfrec'
+        self.val_record_path = self.db_path + 'val.tfrec'
 
         if not os.path.isfile(
                 self.db_path + self.preprocessed_path + "lock") or \
@@ -207,22 +210,15 @@ class Dataset:
         return image
 
     def save_dataset(self):
-        # path_ds = tf.data.Dataset.from_tensor_slices(self.image_index)
-        image_ds = tf.data.Dataset.from_tensor_slices(self.image_index).map(
+        ds = tf.data.Dataset.from_tensor_slices(self.image_index).map(
             tf.read_file)
-        tfrec = tf.data.experimental.TFRecordWriter(
-            self.db_path + 'images.tfrec')
-        tfrec.write(image_ds)
 
-    def get_dataset(self):
         BATCH_SIZE = 32
         AUTOTUNE = tf.data.experimental.AUTOTUNE
         DATASET_SIZE = len(self.image_index)
         train_size = int(0.7 * DATASET_SIZE)
         test_size = int(0.15 * DATASET_SIZE)
 
-        ds = tf.data.TFRecordDataset(self.db_path + 'images.tfrec').map(
-            self.preprocess_image)
         out_ds = tf.data.Dataset.from_tensor_slices(self.age_index)
         ds = tf.data.Dataset.zip((ds, out_ds))
 
@@ -240,4 +236,12 @@ class Dataset:
         test_dataset = test_dataset.take(test_size)
         val_dataset = test_dataset.skip(test_size)
 
-        return train_dataset, test_dataset, val_dataset
+        tfrec = tf.data.experimental.TFRecordWriter(
+            self.train_record_path)
+        tfrec.write(train_dataset)
+        tfrec = tf.data.experimental.TFRecordWriter(
+            self.test_record_path)
+        tfrec.write(test_dataset)
+        tfrec = tf.data.experimental.TFRecordWriter(
+            self.val_record_path)
+        tfrec.write(val_dataset)
