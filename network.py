@@ -1,12 +1,12 @@
 import tensorflow as tf
 
 
-def network_def(input, mode):
+def network_def(input_layer, mode):
     filters = [96, 256, 384]
     kernel_sizes = [7, 5, 3]
     pool_sizes = [5, 3, 2]
     dropout_rates = [0.2, 0.4, 0.7]
-    iterative_layer = input
+    iterative_layer = input_layer
 
     # Convolutional blocks
     for filter_num, kernel_size, pool_size, dropout_rate in zip(filters, kernel_sizes, pool_sizes, dropout_rates):
