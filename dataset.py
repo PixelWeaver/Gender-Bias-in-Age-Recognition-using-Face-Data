@@ -20,9 +20,6 @@ class Dataset:
         self.age_index = []
         self.gender_index = []
         self.target_image_size = 250
-        self.train_record_path = self.db_path + 'train.tfrec'
-        self.test_record_path = self.db_path + 'test.tfrec'
-        self.val_record_path = self.db_path + 'val.tfrec'
 
         if not os.path.isfile(
                 self.db_path + self.preprocessed_path + "lock") or \
@@ -237,11 +234,39 @@ class Dataset:
         val_dataset = test_dataset.skip(test_size)
 
         tfrec = tf.data.experimental.TFRecordWriter(
-            self.train_record_path)
+            self.db_path + 'train.tfrec')
         tfrec.write(train_dataset)
         tfrec = tf.data.experimental.TFRecordWriter(
-            self.test_record_path)
+            self.db_path + 'test.tfrec')
         tfrec.write(test_dataset)
         tfrec = tf.data.experimental.TFRecordWriter(
-            self.val_record_path)
+            self.db_path + 'evaluate.tfrec')
         tfrec.write(val_dataset)
+
+    def get_dataset(self):
+        BATCH_SIZE = 32
+        AUTOTUNE = tf.data.experimental.AUTOTUNE
+        DATASET_SIZE = len(self.image_index)
+        train_size = int(0.7 * DATASET_SIZE)
+        test_size = int(0.15 * DATASET_SIZE)
+
+        ds = tf.data.TFRecordDataset(self.db_path + 'images.tfrec').map(
+            self.preprocess_image)
+        out_ds = tf.data.Dataset.from_tensor_slices(self.age_index)
+        ds = tf.data.Dataset.zip((ds, out_ds))
+
+        # Setting a shuffle buffer size as large as the dataset ensures that
+        # the data is completely shuffled.
+        ds = ds.shuffle(buffer_size=DATASET_SIZE)
+        ds = ds.repeat()
+        ds = ds.batch(BATCH_SIZE)
+        # `prefetch` lets the dataset fetch batches, in the background while
+        # the model is training.
+        ds = ds.prefetch(buffer_size=AUTOTUNE)
+
+        train_dataset = ds.take(train_size)
+        test_dataset = ds.skip(train_size)
+        test_dataset = test_dataset.take(test_size)
+        val_dataset = test_dataset.skip(test_size)
+
+        return train_dataset, test_dataset, val_dataset

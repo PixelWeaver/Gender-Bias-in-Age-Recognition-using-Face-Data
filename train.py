@@ -6,13 +6,14 @@ tf.logging.set_verbosity(tf.logging.INFO)
 
 if __name__ == '__main__':
     dataset = Dataset()
+    train_dataset, test_dataset, val_dataset = dataset.get_dataset()
 
     model_dir = "model"
     config = tf.estimator.RunConfig(model_dir=model_dir, save_checkpoints_steps=1500)
 
-    train_spec = tf.estimator.TrainSpec(input_fn=lambda: input_func(dataset.train_record_path),
+    train_spec = tf.estimator.TrainSpec(input_fn=lambda: input_func(train_dataset),
                                         max_steps=1000)
-    eval_spec = tf.estimator.EvalSpec(input_fn=lambda: input_func(dataset.val_record_path))
+    eval_spec = tf.estimator.EvalSpec(input_fn=lambda: input_func(val_dataset))
 
     estimator = tf.estimator.Estimator(
         model_fn=model_fn, config=config, params={
@@ -38,11 +39,7 @@ def parser(record):
     return {'feats': feats}, label
 
 
-def input_func(tfrecords_path):
-    ds = (
-        tf.data.TFRecordDataset(tfrecords_path).map(parser).batch(1024)
-    )
-
+def input_func(ds):
     iterator = ds.make_one_shot_iterator()
 
     batch_feats, batch_labels = iterator.get_next()
