@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from network import network
+from network import network_def
 
 
 def model_fn(features, labels, mode, params):
@@ -19,7 +19,7 @@ def model_fn(features, labels, mode, params):
     learning_rate = params['learning_rate']
     image_input = features['image']
 
-    age_logits, logits = network(image_input, labels, mode)
+    age_logits, logits = network_def(image_input, labels, mode)
 
     if mode == tf.estimator.ModeKeys.PREDICT:
         return get_prediction_spec(age_logits, logits)
@@ -89,7 +89,7 @@ def get_training_spec(learning_rate, joint_loss):
     """
     Creates training estimator spec
 
-    :param learning rate for optimizer
+    :param learning_rate: learning rate for optimizer
     :param joint_loss: loss op
     :return: Training estimator spec
     """
