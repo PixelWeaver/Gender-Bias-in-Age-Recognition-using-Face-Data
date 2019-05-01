@@ -1,10 +1,11 @@
- import tensorflow as tf
-from dataset import Dataset
-
 # Just disables the warning, doesn't enable AVX/FMA cf
 # https://stackoverflow.com/questions/47068709/your-cpu-supports-instructions-that-this-tensorflow-binary-was-not
 # -compiled-to-u/50073238
 import os
+
+import tensorflow as tf
+
+from dataset import Dataset
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
@@ -16,9 +17,9 @@ class NeuralNetwork:
         if gpu_check:  # Check that GPU is correctly detected
             tf.Session(config=tf.ConfigProto(log_device_placement=True))
 
-    def cnn_model_fn(self, mode):
+    def cnn_model_fn(self, features, mode):
         # Input Layer
-        input_layer = tf.reshape(features["x"], [-1, 28, 28, 1])
+        input_layer = tf.reshape(features["x"], [-1, 250, 250, 3])
 
         # Convolutional Layer #1 + Pooling Layer
         conv_1 = tf.layers.conv2d(
@@ -81,23 +82,25 @@ class NeuralNetwork:
             rate=0.4,
             training=mode == tf.estimator.ModeKeys.TRAIN)
 
-
         # Logits Layer
-        logits = tf.layers.dense(inputs=dropout, units=10)
+        logits = tf.layers.dense(inputs=dropout_1, units=10)
+        # dropout1 ?
 
         predictions = {
             # Generate predictions (for PREDICT and EVAL mode)
             "classes": tf.argmax(input=logits, axis=1),
-            # Add `softmax_tensor` to the graph. It is used for PREDICT and by the
-            # `logging_hook`.
+            # Add `softmax_tensor` to the graph. It is used for PREDICT and by
+            # the `logging_hook`.
             "probabilities": tf.nn.softmax(logits, name="softmax_tensor")
         }
 
         if mode == tf.estimator.ModeKeys.PREDICT:
-            return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
+            return tf.estimator.EstimatorSpec(mode=mode,
+                                              predictions=predictions)
 
         # Calculate Loss (for both TRAIN and EVAL modes)
-        loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
+        loss = tf.losses.sparse_softmax_cross_entropy(labels=labels,
+                                                      logits=logits)
 
         # Configure the Training Op (for TRAIN mode)
         if mode == tf.estimator.ModeKeys.TRAIN:
@@ -105,7 +108,8 @@ class NeuralNetwork:
             train_op = optimizer.minimize(
                 loss=loss,
                 global_step=tf.train.get_global_step())
-            return tf.estimator.EstimatorSpec(mode=mode, loss=loss, train_op=train_op)
+            return tf.estimator.EstimatorSpec(mode=mode, loss=loss,
+                                              train_op=train_op)
 
         # Add evaluation metrics (for EVAL mode)
         eval_metric_ops = {
