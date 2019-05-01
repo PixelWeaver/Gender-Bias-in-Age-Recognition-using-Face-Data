@@ -3,7 +3,7 @@ import tensorflow as tf
 
 def parser(record):
     features = {
-        'feats': tf.FixedLenFeature([], tf.string),
+        'image': tf.FixedLenFeature([], tf.string),
         'label': tf.FixedLenFeature([], tf.int64),
     }
 
