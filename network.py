@@ -1,120 +1,52 @@
-import os
-
 import tensorflow as tf
 
-from dataset import Dataset
 
-# Just disables the warning, doesn't enable AVX/FMA cf
-# https://stackoverflow.com/questions/47068709/your-cpu-supports-instructions-that-this-tensorflow-binary-was-not
-# -compiled-to-u/50073238
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+def network(features, mode):
+    """
+    Network creation function
+
+    :param features:
+    :param mode:
+    :return:
+    """
+    filters = [96, 256, 384]
+    kernel_sizes = [7, 5, 3]
+    pool_sizes = [5, 3, 2]
+    dropout_rates = [0.2, 0.4, 0.7]
+    conv_layer = None
+
+    for filter_num, kernel_size, pool_size, dropout_rate in zip(filters, kernel_sizes, pool_sizes, dropout_rates):
+        conv_layer = conv_block(features, mode, filters=filter_num, dropout=dropout_rate, kernel_size=kernel_size,
+                                pool_size=pool_size)
+
+    # Dense Layer
+    pool4_flat = tf.layers.flatten(conv_layer)
+    dense = tf.layers.dense(inputs=pool4_flat, units=1024, activation=tf.nn.relu)
+    dropout = tf.layers.dropout(
+        inputs=dense, rate=0.4, training=mode == tf.estimator.ModeKeys.TRAIN)
+
+    # Age Head
+    age_dense = tf.layers.dense(inputs=dropout, units=1024)
+    age_logits = tf.layers.dense(inputs=age_dense, units=8)
+
+    # Gender head
+    gender_dense = tf.layers.dense(inputs=dropout, units=1024)
+    gender_logits = tf.layers.dense(inputs=gender_dense, units=2)
+
+    return age_logits, gender_logits
 
 
-class NeuralNetwork:
-    def __init__(self, gpu_check=True):
-        self.dataset = Dataset()
+def conv_block(input_layer, mode, filters=64, kernel_size=3, pool_size=2, dropout=0.0):
+    conv = tf.layers.conv2d(
+        inputs=input_layer,
+        filters=filters,
+        kernel_size=[kernel_size, kernel_size],
+        padding="same",
+        activation=tf.nn.relu)
 
-        if gpu_check:  # Check that GPU is correctly detected
-            tf.Session(config=tf.ConfigProto(log_device_placement=True))
+    pool = tf.layers.max_pooling2d(inputs=conv, pool_size=[pool_size, pool_size], strides=2)
 
-    def cnn_model_fn(self, features, mode):
-        # Input Layer
-        input_layer = tf.reshape(features["x"], [-1, 250, 250, 3])
+    dropout_layer = tf.layers.dropout(
+        inputs=pool, rate=dropout, training=mode == tf.estimator.ModeKeys.TRAIN)
 
-        # Convolutional Layer #1 + Pooling Layer
-        conv_1 = tf.layers.conv2d(
-            inputs=input_layer,
-            filters=96,
-            kernel_size=[7, 7],
-            name="conv_1",
-            padding="same",
-            activation=tf.nn.relu)
-
-        pool_1 = tf.layers.max_pooling2d(
-            inputs=conv_1,
-            pool_size=[5, 5],
-            strides=5)
-
-        # Convolutional Layer #2 + Pooling Layer
-        conv_2 = tf.layers.conv2d(
-            inputs=pool_1,
-            filters=256,
-            kernel_size=[5, 5],
-            name="conv_2",
-            padding="same",
-            activation=tf.nn.relu)
-        pool_2 = tf.layers.max_pooling2d(
-            inputs=conv_2,
-            pool_size=[3, 3],
-            strides=3)
-
-        # Convolutional Layer #3 + Pooling Layer
-        conv_3 = tf.layers.conv2d(
-            inputs=pool_2,
-            filters=384,
-            kernel_size=[3, 3],
-            name="conv_3",
-            padding="same",
-            activation=tf.nn.relu)
-        pool_3 = tf.layers.max_pooling2d(
-            inputs=conv_3,
-            pool_size=[2, 2],
-            strides=2)
-
-        # Dense Layer #1
-        pool2_flat = tf.reshape(pool_3, [-1, 7 * 7 * 64])
-        dense_1 = tf.layers.dense(
-            inputs=pool2_flat,
-            units=512,
-            activation=tf.nn.relu)
-        dropout_1 = tf.layers.dropout(
-            inputs=dense_1,
-            rate=0.4,
-            training=mode == tf.estimator.ModeKeys.TRAIN)
-
-        # Dense Layer #2
-        dense_2 = tf.layers.dense(
-            inputs=dropout_1,
-            units=512,
-            activation=tf.nn.relu)
-        dropout_2 = tf.layers.dropout(
-            inputs=dense_2,
-            rate=0.4,
-            training=mode == tf.estimator.ModeKeys.TRAIN)
-
-        # Logits Layer
-        logits = tf.layers.dense(inputs=dropout_1, units=10)
-        # dropout1 ?
-
-        predictions = {
-            # Generate predictions (for PREDICT and EVAL mode)
-            "classes": tf.argmax(input=logits, axis=1),
-            # Add `softmax_tensor` to the graph. It is used for PREDICT and by
-            # the `logging_hook`.
-            "probabilities": tf.nn.softmax(logits, name="softmax_tensor")
-        }
-
-        if mode == tf.estimator.ModeKeys.PREDICT:
-            return tf.estimator.EstimatorSpec(mode=mode,
-                                              predictions=predictions)
-
-        # Calculate Loss (for both TRAIN and EVAL modes)
-        loss = tf.losses.sparse_softmax_cross_entropy(labels=labels,
-                                                      logits=logits)
-
-        # Configure the Training Op (for TRAIN mode)
-        if mode == tf.estimator.ModeKeys.TRAIN:
-            optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.001)
-            train_op = optimizer.minimize(
-                loss=loss,
-                global_step=tf.train.get_global_step())
-            return tf.estimator.EstimatorSpec(mode=mode, loss=loss,
-                                              train_op=train_op)
-
-        # Add evaluation metrics (for EVAL mode)
-        eval_metric_ops = {
-            "accuracy": tf.metrics.accuracy(
-                labels=labels, predictions=predictions["classes"])
-        }
-        return tf.estimator.EstimatorSpec(
-            mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
+    return dropout_layer
