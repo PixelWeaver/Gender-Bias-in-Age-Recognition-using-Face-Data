@@ -207,41 +207,12 @@ class Dataset:
         return image
 
     def save_dataset(self):
-        ds = tf.data.Dataset.from_tensor_slices(self.image_index).map(
+        # path_ds = tf.data.Dataset.from_tensor_slices(self.image_index)
+        image_ds = tf.data.Dataset.from_tensor_slices(self.image_index).map(
             tf.read_file)
-
-        BATCH_SIZE = 32
-        AUTOTUNE = tf.data.experimental.AUTOTUNE
-        DATASET_SIZE = len(self.image_index)
-        train_size = int(0.7 * DATASET_SIZE)
-        test_size = int(0.15 * DATASET_SIZE)
-
-        out_ds = tf.data.Dataset.from_tensor_slices(self.age_index)
-        ds = tf.data.Dataset.zip((ds, out_ds))
-
-        # Setting a shuffle buffer size as large as the dataset ensures that
-        # the data is completely shuffled.
-        ds = ds.shuffle(buffer_size=DATASET_SIZE)
-        ds = ds.repeat()
-        ds = ds.batch(BATCH_SIZE)
-        # `prefetch` lets the dataset fetch batches, in the background while
-        # the model is training.
-        ds = ds.prefetch(buffer_size=AUTOTUNE)
-
-        train_dataset = ds.take(train_size)
-        test_dataset = ds.skip(train_size)
-        test_dataset = test_dataset.take(test_size)
-        val_dataset = test_dataset.skip(test_size)
-
         tfrec = tf.data.experimental.TFRecordWriter(
-            self.db_path + 'train.tfrec')
-        tfrec.write(train_dataset)
-        tfrec = tf.data.experimental.TFRecordWriter(
-            self.db_path + 'test.tfrec')
-        tfrec.write(test_dataset)
-        tfrec = tf.data.experimental.TFRecordWriter(
-            self.db_path + 'evaluate.tfrec')
-        tfrec.write(val_dataset)
+            self.db_path + 'images.tfrec')
+        tfrec.write(image_ds)
 
     def get_dataset(self):
         BATCH_SIZE = 32
