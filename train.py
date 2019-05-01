@@ -10,9 +10,9 @@ if __name__ == '__main__':
     model_dir = "model"
     config = tf.estimator.RunConfig(model_dir=model_dir, save_checkpoints_steps=1500)
 
-    train_spec = tf.estimator.TrainSpec(input_fn=lambda: my_input_fn(dataset.train_record_path),
+    train_spec = tf.estimator.TrainSpec(input_fn=lambda: input_func(dataset.train_record_path),
                                         max_steps=1000)
-    eval_spec = tf.estimator.EvalSpec(input_fn=lambda: my_input_fn(dataset.val_record_path))
+    eval_spec = tf.estimator.EvalSpec(input_fn=lambda: input_func(dataset.val_record_path))
 
     estimator = tf.estimator.Estimator(
         model_fn=model_fn, config=config, params={
@@ -38,7 +38,7 @@ def parser(record):
     return {'feats': feats}, label
 
 
-def my_input_fn(tfrecords_path):
+def input_func(tfrecords_path):
     ds = (
         tf.data.TFRecordDataset(tfrecords_path).map(parser).batch(1024)
     )
