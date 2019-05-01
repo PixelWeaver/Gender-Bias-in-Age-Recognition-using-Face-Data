@@ -201,7 +201,7 @@ class Dataset:
     @staticmethod
     def preprocess_image(image):
         image = tf.image.decode_jpeg(image, channels=3)
-        image = tf.image.resize_images(image, [192, 192])
+        image = tf.image.resize_images(image, [250, 250])
         image /= 255.0  # normalize to [0,1] range
 
         return image
