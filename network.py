@@ -1,12 +1,12 @@
-# Just disables the warning, doesn't enable AVX/FMA cf
-# https://stackoverflow.com/questions/47068709/your-cpu-supports-instructions-that-this-tensorflow-binary-was-not
-# -compiled-to-u/50073238
 import os
 
 import tensorflow as tf
 
 from dataset import Dataset
 
+# Just disables the warning, doesn't enable AVX/FMA cf
+# https://stackoverflow.com/questions/47068709/your-cpu-supports-instructions-that-this-tensorflow-binary-was-not
+# -compiled-to-u/50073238
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
